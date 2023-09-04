@@ -67,3 +67,22 @@ def decode_response(response):
     return mx.image.imdecode(base64.b64decode(b64_string)).astype(np.float32)
 
 def transform_fn(net, data, input_content_type, output_content_type):
+    try:
+        inp = json.loads(json.loads(data)[0])
+        bucket = inp['bucket']
+        prefix = inp['prefix']
+        s3_response = download_from_s3(bucket, prefix)
+        img = decode_response(s3_response)
+        img = nd.expand_dims(nd.transpose(img, (2, 0, 1)), 0)
+        img = nd.sum_axis(nd.array([[[[0.3]], [[0.59]], [[0.11]]]]) * img, 1, keepdims=True)
+        batch = mx.io.DataBatch([img])
+        net.forward(batch)
+        raw_output = net.get_outputs()[0].asnumpy()
+        mask = np.argmax(raw_output, axis=(1))[0].astype(np.uint8)
+        output_prefix = os.path.join(
+            'output', '/'.join(prefix.split('/')[1:]).split('.')[0] + '_MASK_PREDICTION.png')
+        push_to_s3(mask, bucket, output_prefix)
+        response = {'bucket': bucket, 'prefix': output_prefix}
+    except Exception as e:
+        response = {'Error': str(e)}
+    return json.dumps(response), output_content_type
