@@ -31,4 +31,18 @@ def _down_branch(inp):
     conv5 = _down_block(pool4, num_filter=512, kernel=(3, 3), pad=(1, 1), block=5, pool=False)
     return [conv5, conv4, conv3, conv2, conv1]
 
-def _up_block(
+def _up_block(inp, down_feature, num_filter, kernel, pad, block):
+    trans_conv = mx.sym.Deconvolution(
+        inp, num_filter=num_filter, kernel=(2, 2), stride=(2, 2), no_bias=True, name='trans_conv_%i' % block
+    )
+    up = mx.sym.concat(*[trans_conv, down_feature], dim=1, name='concat_%i' % block)
+    conv = _conv_block(up, num_filter, kernel, pad, block, 1)
+    conv = _conv_block(conv, num_filter, kernel, pad, block, 2)
+    return conv
+
+def _up_branch(down_features, num_classes):
+    conv6 = _up_block(down_features[0], down_features[1], num_filter=256, kernel=(3, 3), pad=(1, 1), block=6)
+    conv7 = _up_block(conv6, down_features[2], num_filter=128, kernel=(3, 3), pad=(1, 1), block=7)
+    conv8 = _up_block(conv7, down_features[3], num_filter=64, kernel=(3, 3), pad=(1, 1), block=8)
+    conv9 = _up_block(conv8, down_features[4], num_filter=32, kernel=(3, 3), pad=(1, 1), block=9)
+    conv10 = mx.sym.Convolution(conv9, num_filter=num_classes, kernel=(1, 1), name='conv
