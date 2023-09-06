@@ -45,4 +45,27 @@ def _up_branch(down_features, num_classes):
     conv7 = _up_block(conv6, down_features[2], num_filter=128, kernel=(3, 3), pad=(1, 1), block=7)
     conv8 = _up_block(conv7, down_features[3], num_filter=64, kernel=(3, 3), pad=(1, 1), block=8)
     conv9 = _up_block(conv8, down_features[4], num_filter=32, kernel=(3, 3), pad=(1, 1), block=9)
-    conv10 = mx.sym.Convolution(conv9, num_filter=num_classes, kernel=(1, 1), name='conv
+    conv10 = mx.sym.Convolution(conv9, num_filter=num_classes, kernel=(1, 1), name='conv10_1')
+    return conv10
+
+
+def build_unet(num_classes, inference=False, class_weights=None):
+    data = mx.sym.Variable(name='data')
+    down_features = _down_branch(data)
+    decoded = _up_branch(down_features, num_classes)
+    channel_softmax = mx.sym.softmax(decoded, axis=1)
+    if inference:
+        return channel_softmax
+    else:
+        label = mx.sym.Variable(name='label')
+        if class_weights is None:
+            class_weights = np.ones((1, num_classes)).tolist()
+        else:
+            class_weights = class_weights.tolist()
+        class_weights = mx.sym.Variable('constant_class_weights', shape=(1, num_classes), init=mx.init.Constant(value=class_weights))
+        class_weights = mx.sym.BlockGrad(class_weights)
+        loss = mx.sym.MakeLoss(
+            avg_dice_coef_loss(label, channel_softmax, class_weights),
+            normalization='batch'
+        )
+        mask_output = mx.sym.BlockGrad(chann
