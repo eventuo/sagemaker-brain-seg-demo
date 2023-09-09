@@ -68,4 +68,28 @@ def build_unet(num_classes, inference=False, class_weights=None):
             avg_dice_coef_loss(label, channel_softmax, class_weights),
             normalization='batch'
         )
-        mask_output = mx.sym.BlockGrad(chann
+        mask_output = mx.sym.BlockGrad(channel_softmax, 'mask')
+        out = mx.sym.Group([mask_output, loss])
+        return out
+
+###############################
+###     ENet Architecture   ###
+###############################
+# Architecture adapted from https://arxiv.org/abs/1606.02147
+# Code adapted from keras implementation here: https://github.com/PavlosMelissinos/enet-keras
+
+# This operator applies dropout to entire feature maps, as explained here: 
+# https://stats.stackexchange.com/questions/282282/how-is-spatial-dropout-in-2d-implemented
+
+class SpatialDropout(mx.operator.CustomOp):
+    def __init__(self, p, num_filters, ctx):
+        self._p = float(p)
+        self._num_filters = int(num_filters)
+        self._ctx = ctx
+        self._spatial_dropout_mask = nd.ones(shape=(1, 1, 1, 1), ctx=self._ctx)
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        x = in_data[0]
+        if is_train:
+            self._spatial_dropout_mask = nd.broadcast_greater(
+    
