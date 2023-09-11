@@ -114,4 +114,28 @@ class SpatialDropoutProp(mx.operator.CustomOpProp):
         self._p = p
         self._num_filters = num_filters
 
-    d
+    def infer_shape(self, in_shapes):
+        data_shape = in_shapes[0]
+        output_shape = data_shape
+        # return 3 lists representing inputs shapes, outputs shapes, and aux
+        # data shapes.
+        return (data_shape,), (output_shape,), ()
+
+    def create_operator(self, ctx, in_shape, in_dtypes):
+        return SpatialDropout(self._p, self._num_filters, ctx)
+
+
+def _same_padding(inp_dims, outp_dims, strides, kernel):
+    inp_h, inp_w = inp_dims[1:]
+    outp_h, outp_w = outp_dims
+    kernel_h, kernel_w = kernel
+    pad_along_height = max((outp_h - 1) * strides[0] + kernel_h - inp_h, 0)
+    pad_along_width = max((outp_w - 1) * strides[1] + kernel_w - inp_w, 0)
+    pad_top = pad_along_height // 2
+    pad_bottom = pad_along_height - pad_top
+    pad_left = pad_along_width // 2
+    pad_right = pad_along_width - pad_left
+    return (0, 0, 0, 0, pad_top, pad_bottom, pad_left, pad_right)
+
+
+def _initial_block(inp, inp_dims, outp_di
