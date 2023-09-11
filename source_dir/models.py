@@ -138,4 +138,37 @@ def _same_padding(inp_dims, outp_dims, strides, kernel):
     return (0, 0, 0, 0, pad_top, pad_bottom, pad_left, pad_right)
 
 
-def _initial_block(inp, inp_dims, outp_di
+def _initial_block(inp, inp_dims, outp_dims, nb_filter=13, nb_row=3, nb_col=3, strides=(2, 2)):
+    padded_inp = mx.sym.pad(
+        inp, mode='constant',
+        pad_width=_same_padding(inp_dims, outp_dims, strides, kernel=(nb_row, nb_col)),
+        name='init_pad'
+    )
+    conv = mx.sym.Convolution(
+        padded_inp,
+        num_filter=nb_filter,
+        kernel=(nb_row, nb_col),
+        stride=strides,
+        name='init_conv'
+    )
+    max_pool = mx.sym.Pooling(inp, kernel=(2, 2), stride=(2, 2), pool_type='max', name='init_pool')
+    merged = mx.sym.concat(*[conv, max_pool], dim=1, name='init_concat')
+    return merged
+
+
+def _encoder_bottleneck(
+        inp,
+        inp_filter,
+        output,
+        name,
+        internal_scale=4,
+        asymmetric=0,
+        dilated=0,
+        downsample=False,
+        dropout_rate=0.1):
+    # main branch
+    internal = output // internal_scale
+    encoder = inp
+
+    # 1x1
+    # the 1st 1x1 projection is replaced w
