@@ -92,4 +92,26 @@ class SpatialDropout(mx.operator.CustomOp):
         x = in_data[0]
         if is_train:
             self._spatial_dropout_mask = nd.broadcast_greater(
-    
+                nd.random_uniform(low=0, high=1, shape=(1, self._num_filters, 1, 1), ctx=self._ctx),
+                nd.ones(shape=(1, self._num_filters, 1, 1), ctx=self._ctx) * self._p,
+                ctx=self._ctx
+            )
+            y = nd.broadcast_mul(x, self._spatial_dropout_mask, ctx=self._ctx) / (1 - self._p)
+            self.assign(out_data[0], req[0], y)
+        else:
+            self.assign(out_data[0], req[0], x)
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        dy = out_grad[0]
+        dx = nd.broadcast_mul(self._spatial_dropout_mask, dy)
+        self.assign(in_grad[0], req[0], dx)
+
+
+@mx.operator.register('spatial_dropout')
+class SpatialDropoutProp(mx.operator.CustomOpProp):
+    def __init__(self, p, num_filters):
+        super(SpatialDropoutProp, self).__init__(True)
+        self._p = p
+        self._num_filters = num_filters
+
+    d
