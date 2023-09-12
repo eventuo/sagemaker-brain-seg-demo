@@ -226,4 +226,26 @@ def _encoder_bottleneck(
         no_bias=True,
         name="conv5_%i" % name
     )
-    encoder = mx.sym.BatchNorm(encoder, 
+    encoder = mx.sym.BatchNorm(encoder, momentum=0.1, name='bn3_%i' % name)
+    encoder = mx.sym.Custom(
+        encoder,
+        op_type='spatial_dropout',
+        name='spatial_dropout_%i' % name,
+        p=dropout_rate,
+        num_filters=output
+    )
+    other = inp
+    # other branch
+    if downsample:
+        other = mx.sym.Pooling(other, kernel=(2, 2), stride=(2, 2), pool_type='max', name='pool1_%i' % name)
+        other = mx.sym.transpose(other, axes=(0, 2, 1, 3), name='trans1_%i' % name)
+        pad_feature_maps = output - inp_filter
+        other = mx.sym.pad(
+            other,
+            mode='constant',
+            pad_width=(0, 0, 0, 0, 0, pad_feature_maps, 0, 0),
+            name='pad1_%i' % name
+        )
+        other = mx.sym.transpose(other, axes=(0, 2, 1, 3), name='trans2_%i' % name)
+    encoder = mx.sym.broadcast_add(encoder, other, name='add1_%i' % name)
+    encoder = mx.sym.LeakyReLU(encoder, act_type
