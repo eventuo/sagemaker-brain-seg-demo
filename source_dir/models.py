@@ -297,4 +297,32 @@ def _decoder_bottleneck(encoder, inp_filter, output, upsample=False, upsample_di
         other = mx.sym.Convolution(other, num_filter=output, kernel=(1, 1), no_bias=True, name="conv9_%i" % name)
         other = mx.sym.BatchNorm(other, momentum=0.1, name='bn6_%i' % name)
         if upsample and reverse_module is not False:
-            other = mx.sym.UpSampling(other, scale=2, sample_type='nearest', name="upsample1_%i" % nam
+            other = mx.sym.UpSampling(other, scale=2, sample_type='nearest', name="upsample1_%i" % name)
+    if upsample and reverse_module is False:
+        decoder = x
+    else:
+        x = mx.sym.BatchNorm(x, momentum=0.1, name='bn7_%i' % name)
+        decoder = mx.sym.broadcast_add(x, other, name='add2_%i' % name)
+        decoder = mx.sym.Activation(decoder, act_type='relu', name='relu3_%i' % name)
+    return decoder
+
+
+def _build_decoder(encoder, nc, output_shape=(3, 512, 512)):
+    enet = _decoder_bottleneck(
+        encoder,
+        128,
+        64,
+        upsample=True,
+        upsample_dims=(output_shape[1] // 4, output_shape[2] // 4),
+        reverse_module=True,
+        name=20
+    )  # bottleneck 4.0
+    enet = _decoder_bottleneck(enet, 64, 64, name=21)  # bottleneck 4.1
+    enet = _decoder_bottleneck(enet, 64, 64, name=22)  # bottleneck 4.2
+    enet = _decoder_bottleneck(
+        enet,
+        64,
+        16,
+        upsample=True,
+        upsample_dims=(output_shape[1] // 2, output_shape[2] // 2),
+        reverse_module=Tr
