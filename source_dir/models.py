@@ -195,4 +195,35 @@ def _encoder_bottleneck(
             kernel=(1, asymmetric),
             pad=(0, asymmetric // 2),
             no_bias=True,
-            name="conv3_
+            name="conv3_%i" % name
+        )
+        encoder = mx.sym.Convolution(
+            encoder,
+            num_filter=internal,
+            kernel=(asymmetric, 1), 
+            pad=(asymmetric // 2, 0),
+            name="conv4_%i" % name
+        )
+    elif dilated:
+        encoder = mx.sym.Convolution(
+            encoder,
+            num_filter=internal,
+            kernel=(3, 3),
+            dilate=(dilated, dilated),
+            pad=((3 + (dilated - 1) * 2) // 2,
+                 (3 + (dilated - 1) * 2) // 2),
+            name="conv2_%i" % name
+        )
+    else:
+        raise(Exception('You shouldn\'t be here'))
+    encoder = mx.sym.BatchNorm(encoder, momentum=0.1, name='bn2_%i' % name)
+    encoder = mx.sym.LeakyReLU(encoder, act_type='prelu', name='prelu2_%i' % name)
+    # 1x1
+    encoder = mx.sym.Convolution(
+        encoder,
+        num_filter=output,
+        kernel=(1, 1),
+        no_bias=True,
+        name="conv5_%i" % name
+    )
+    encoder = mx.sym.BatchNorm(encoder, 
