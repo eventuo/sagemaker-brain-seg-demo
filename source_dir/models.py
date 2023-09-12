@@ -263,4 +263,20 @@ def _build_encoder(inp, inp_dims, dropout_rate=0.01):
     for n in range(2):
         enet = _encoder_bottleneck(enet, 128, 128, name=n * 10 + 20)  # bottleneck 2.1
         enet = _encoder_bottleneck(enet, 128, 128, dilated=2, name=n * 10 + 21)  # bottleneck 2.2
-        enet = _encoder_bottleneck(enet, 128, 128, asymmetric=
+        enet = _encoder_bottleneck(enet, 128, 128, asymmetric=5, name=n * 10 + 22)  # bottleneck 2.3
+        enet = _encoder_bottleneck(enet, 128, 128, dilated=4, name=n * 10 + 23)  # bottleneck 2.4
+        enet = _encoder_bottleneck(enet, 128, 128, name=n * 10 + 24)  # bottleneck 2.5
+        enet = _encoder_bottleneck(enet, 128, 128, dilated=8, name=n * 10 + 25)  # bottleneck 2.6
+        enet = _encoder_bottleneck(enet, 128, 128, asymmetric=5, name=n * 10 + 26)  # bottleneck 2.7
+        enet = _encoder_bottleneck(enet, 128, 128, dilated=16, name=n * 10 + 27)  # bottleneck 2.8
+    return enet
+
+
+def _decoder_bottleneck(encoder, inp_filter, output, upsample=False, upsample_dims=None, reverse_module=False, name=0):
+    internal = output // 4
+
+    x = mx.sym.Convolution(encoder, num_filter=internal, kernel=(1, 1), no_bias=True, name="conv6_%i" % name)
+    x = mx.sym.BatchNorm(x, momentum=0.1, name='bn4_%i' % name)
+    x = mx.sym.Activation(x, act_type='relu', name='relu1_%i' % name)
+    if not upsample:
+       
