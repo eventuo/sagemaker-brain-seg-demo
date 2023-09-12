@@ -279,4 +279,22 @@ def _decoder_bottleneck(encoder, inp_filter, output, upsample=False, upsample_di
     x = mx.sym.BatchNorm(x, momentum=0.1, name='bn4_%i' % name)
     x = mx.sym.Activation(x, act_type='relu', name='relu1_%i' % name)
     if not upsample:
-       
+        x = mx.sym.Convolution(x, num_filter=internal, kernel=(3, 3), pad=(1, 1), no_bias=False, name="conv7_%i" % name)
+    else:
+        x = mx.sym.Deconvolution(
+            x,
+            num_filter=internal,
+            kernel=(3, 3),
+            stride=(2, 2),
+            target_shape=upsample_dims,
+            name="dconv1_%i" % name
+        )
+    x = mx.sym.BatchNorm(x, momentum=0.1, name='bn5_%i' % name)
+    x = mx.sym.Activation(x, act_type='relu', name='relu2_%i' % name)
+    x = mx.sym.Convolution(x, num_filter=output, kernel=(1, 1), no_bias=True, name="conv8_%i" % name)
+    other = encoder
+    if inp_filter != output or upsample:
+        other = mx.sym.Convolution(other, num_filter=output, kernel=(1, 1), no_bias=True, name="conv9_%i" % name)
+        other = mx.sym.BatchNorm(other, momentum=0.1, name='bn6_%i' % name)
+        if upsample and reverse_module is not False:
+            other = mx.sym.UpSampling(other, scale=2, sample_type='nearest', name="upsample1_%i" % nam
