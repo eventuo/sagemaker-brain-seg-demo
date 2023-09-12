@@ -325,4 +325,33 @@ def _build_decoder(encoder, nc, output_shape=(3, 512, 512)):
         16,
         upsample=True,
         upsample_dims=(output_shape[1] // 2, output_shape[2] // 2),
-        reverse_module=Tr
+        reverse_module=True,
+        name=23
+    )  # bottleneck 5.0
+    enet = _decoder_bottleneck(enet, 16, 16, name=24)  # bottleneck 5.1
+
+    enet = mx.sym.Deconvolution(
+        enet,
+        num_filter=nc,
+        kernel=(2, 2),
+        stride=(2, 2),
+        target_shape=(output_shape[1], output_shape[2]),
+        name='dconv2'
+    )
+    return enet
+
+
+def build_enet(inp_dims, num_classes, inference=False, class_weights=None):
+    data = mx.sym.Variable(name='data')
+    encoder = _build_encoder(data, inp_dims=inp_dims)
+    decoded = _build_decoder(encoder, num_classes, output_shape=inp_dims)
+    channel_softmax = mx.sym.softmax(decoded, axis=1)
+    if inference:
+        return channel_softmax
+    else:
+        label = mx.sym.Variable(name='label')
+        if class_weights is None:
+            class_weights = np.ones((1, num_classes)).tolist()
+        else:
+            class_weights = class_weights.tolist()
+        class_weights = mx.sy
