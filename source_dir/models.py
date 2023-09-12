@@ -248,4 +248,19 @@ def _encoder_bottleneck(
         )
         other = mx.sym.transpose(other, axes=(0, 2, 1, 3), name='trans2_%i' % name)
     encoder = mx.sym.broadcast_add(encoder, other, name='add1_%i' % name)
-    encoder = mx.sym.LeakyReLU(encoder, act_type
+    encoder = mx.sym.LeakyReLU(encoder, act_type='prelu', name='prelu3_%i' % name)
+    return encoder
+
+def _build_encoder(inp, inp_dims, dropout_rate=0.01):
+    enet = _initial_block(inp, inp_dims=inp_dims, outp_dims=(inp_dims[1] // 2, inp_dims[2] // 2))
+    enet = mx.sym.BatchNorm(enet, momentum=0.1, name='bn_0')
+    encet = mx.sym.LeakyReLU(enet, act_type='prelu', name='prelu_0')
+    enet = _encoder_bottleneck(enet, 13 + inp_dims[0], 64, downsample=True, dropout_rate=dropout_rate, name=1)  # bottleneck 1.0
+    for n in range(4):
+        enet = _encoder_bottleneck(enet, 64, 64, dropout_rate=dropout_rate, name=n + 10)  # bottleneck 1.i
+    enet = _encoder_bottleneck(enet, 64, 128, downsample=True, name=19)  # bottleneck 2.0
+    # bottleneck 2.x and 3.x
+    for n in range(2):
+        enet = _encoder_bottleneck(enet, 128, 128, name=n * 10 + 20)  # bottleneck 2.1
+        enet = _encoder_bottleneck(enet, 128, 128, dilated=2, name=n * 10 + 21)  # bottleneck 2.2
+        enet = _encoder_bottleneck(enet, 128, 128, asymmetric=
