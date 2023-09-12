@@ -354,4 +354,16 @@ def build_enet(inp_dims, num_classes, inference=False, class_weights=None):
             class_weights = np.ones((1, num_classes)).tolist()
         else:
             class_weights = class_weights.tolist()
-        class_weights = mx.sy
+        class_weights = mx.sym.Variable(
+            'constant_class_weights', shape=(
+                1, num_classes), init=mx.init.Constant(value=class_weights))
+        class_weights = mx.sym.BlockGrad(class_weights)
+        loss = mx.sym.MakeLoss(
+            avg_dice_coef_loss(
+                label,
+                channel_softmax,
+                class_weights),
+            normalization='batch')
+        mask_output = mx.sym.BlockGrad(channel_softmax, 'mask')
+        out = mx.sym.Group([mask_output, loss])
+        return out
