@@ -171,4 +171,28 @@ def _encoder_bottleneck(
     encoder = inp
 
     # 1x1
-    # the 1st 1x1 projection is replaced w
+    # the 1st 1x1 projection is replaced with a 2x2 convolution when
+    # downsampling
+    input_stride = 2 if downsample else 1
+    encoder = mx.sym.Convolution(
+        encoder,
+        num_filter=internal,
+        kernel=(input_stride, input_stride),
+        stride=(input_stride, input_stride),
+        no_bias=True,
+        name="conv1_%i" % name
+    )
+    # Batch normalization + PReLU
+    encoder = mx.sym.BatchNorm(encoder, momentum=0.1, name="bn1_%i" % name)
+    encoder = mx.sym.LeakyReLU(encoder, act_type='prelu', name='prelu1_%i' % name)
+    # conv
+    if not asymmetric and not dilated:
+        encoder = mx.sym.Convolution(encoder, num_filter=internal, kernel=(3, 3), pad=(1, 1), name="conv2_%i" % name)  
+    elif asymmetric:
+        encoder = mx.sym.Convolution(
+            encoder, 
+            num_filter=internal, 
+            kernel=(1, asymmetric),
+            pad=(0, asymmetric // 2),
+            no_bias=True,
+            name="conv3_
